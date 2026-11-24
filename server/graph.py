@@ -1,11 +1,10 @@
 """LangGraph pipeline. route -> generate -> rule_check -> rarity -> validate. Later: final ranking, prune."""
 import re
-from concurrent.futures import ThreadPoolExecutor
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from .llm import NoLogprobs, call_choice, call_json
+from .llm import call_json
 from .rarity import flag, zipf_score
 from .rules import build_rule, normalize, passes, report
 
@@ -236,66 +235,13 @@ def validate(state: State) -> State:
     return {"candidates": kept, "dropped": dropped, "calls": state.get("calls", []) + [info]}
 
 
-DECIDE_SYSTEM = """You are a strict fact-checker for a rare-answer trivia game. An answer scores 0 if it is not a real,
-widely recognized item that satisfies the prompt. Judge only whether the candidate is real and meets every condition
-actually written in the prompt (never invent one; never judge letter or spelling rules, code checks them). The game
-accepts common usage and close variants (England counts as a country). Do not reward obscurity, only validity.
-Question: is the candidate a real, widely recognized answer? Choose one:
-A) Yes, clearly  B) Probably  C) Unsure  D) No
-Answer with one letter."""
-
-# Placeholder weights mapping the A-D distribution to P(valid). Hand-set, not fitted: calibrate later.
-VALIDITY_WEIGHTS = {"A": 1.0, "B": 0.7, "C": 0.3, "D": 0.0}
-# Placeholder points ladder by position in the niche-first list (not fitted to logged outcomes).
-POINTS_BY_POSITION = [85, 85, 60, 60, 30, 30, 30, 30]
-DECIDE_MAX = 8
-
-
-def p_valid_from_probs(probs: dict) -> float:
-    return sum(VALIDITY_WEIGHTS[k] * probs.get(k, 0.0) for k in VALIDITY_WEIGHTS)
-
-
-def decide(state: State) -> State:
-    """One multiple-choice call per candidate (top DECIDE_MAX, in parallel), P(valid) read from logprobs. Drops below
-    VALID_MIN, ranks the rest by expected points = P(valid) x placeholder points for its niche-first position.
-    A failed call fails open for that candidate (p_valid None); a reply without logprobs raises NoLogprobs."""
-    cands = state.get("candidates", [])[:DECIDE_MAX]
-    if not cands:
-        return {}
-    subject = state.get("subject")
-    target = f"Prompt: {subject}" if state["category"] == "constraint" and subject else f"Prompt: {state['prompt']}"
-
-    def one(c):
-        try:
-            return call_choice("decide", DECIDE_SYSTEM, f"{target}\nCandidate: {c['answer']}")
-        except NoLogprobs:
-            raise
-        except Exception:  # transient API error: keep the candidate, unscored
-            return None, {"node": "decide", "model": "error", "latency_ms": 0, "tokens": 0}
-
-    with ThreadPoolExecutor(max_workers=len(cands)) as pool:
-        results = list(pool.map(one, cands))
-    kept, dropped, calls = [], list(state.get("dropped", [])), list(state.get("calls", []))
-    for pos, (c, (probs, info)) in enumerate(zip(cands, results)):
-        calls.append(info)
-        pts = POINTS_BY_POSITION[min(pos, len(POINTS_BY_POSITION) - 1)]
-        p = None if probs is None else p_valid_from_probs(probs)
-        c = {**c, "p_valid": p, "choice_probs": probs, "valid_reason": "",
-             "expected_pts": None if p is None else round(p * pts, 1), "_pts": pts}
-        (dropped if p is not None and p < VALID_MIN else kept).append(c)
-    kept.sort(key=lambda c: -(c["expected_pts"] if c["expected_pts"] is not None else c["_pts"]))  # stable
-    for c in kept + dropped:
-        c.pop("_pts", None)
-    return {"candidates": kept, "dropped": dropped, "calls": calls}
-
-
 def build_graph():
     g = StateGraph(State)
     g.add_node("route", route)
     g.add_node("generate", generate)
     g.add_node("rule_check", rule_check)
     g.add_node("rarity", rarity)
-    g.add_node("validate", validate)  # `decide` (per-candidate logprob MCQ) is built and tested but not wired: it over-dropped
+    g.add_node("validate", validate)
     g.add_edge(START, "route")
     g.add_edge("route", "generate")
     g.add_edge("generate", "rule_check")

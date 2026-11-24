@@ -28,3 +28,11 @@ Removing the category label from the validator's input fixed the Minecraft promp
 
 ## 4. Conclusion
 The final pipeline basically scores the same as the original within noise (43.1% listed against 43.0%), so the one lasting change is the Minecraft fix. Most of what looked like improvements in early runs was just noise, so measuring the noise first was the most critical thing I did. Hidden conditions and questions the model can't know are still open problems.
+
+| Metric | Baseline (10 runs) | Final branch (8 runs) | Original `main` (5 runs) |
+| --- | --- | --- | --- |
+| Answers listed on the sheet | 43.0% | 43.1% | 43.7% |
+| Estimated points per candidate | 50.7 | 51.0 | 49.9 |
+| Top pick points (lower bound) | 18.4 | 19.1 | 18.1 |
+| Seconds per prompt | 4.89 | 4.90 | 4.54 |
+

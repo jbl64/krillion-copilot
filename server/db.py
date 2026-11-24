@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS rounds (
   started_at REAL, mode TEXT, prompt TEXT, category TEXT, plan TEXT, rule TEXT
 );
 CREATE TABLE IF NOT EXISTS candidates (
-  round_id INTEGER, rank INTEGER, answer TEXT, why TEXT, rarity REAL, flag TEXT, p_valid REAL, dropped INTEGER DEFAULT 0,
-  expected_pts REAL
+  round_id INTEGER, rank INTEGER, answer TEXT, why TEXT, rarity REAL, flag TEXT, p_valid REAL, dropped INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS outcomes (
   round_id INTEGER, typed_answer TEXT, tier TEXT, points INTEGER, timed_out INTEGER, logged_at REAL
@@ -31,8 +30,7 @@ def conn():
     if "rule" not in {row[1] for row in c.execute("PRAGMA table_info(rounds)")}:
         c.execute("ALTER TABLE rounds ADD COLUMN rule TEXT")
     have = {row[1] for row in c.execute("PRAGMA table_info(candidates)")}
-    for col, typ in (("rarity", "REAL"), ("flag", "TEXT"), ("p_valid", "REAL"), ("dropped", "INTEGER DEFAULT 0"),
-                      ("expected_pts", "REAL")):
+    for col, typ in (("rarity", "REAL"), ("flag", "TEXT"), ("p_valid", "REAL"), ("dropped", "INTEGER DEFAULT 0")):
         if col not in have:
             c.execute(f"ALTER TABLE candidates ADD COLUMN {col} {typ}")
     return c
@@ -49,10 +47,10 @@ def log_round(prompt: str, mode: str, result: dict) -> int:
     for dropped, group in ((0, result.get("candidates", [])), (1, result.get("dropped", []))):
         for cand in group:
             c.execute(
-                "INSERT INTO candidates (round_id, rank, answer, why, rarity, flag, p_valid, dropped, expected_pts)"
-                " VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO candidates (round_id, rank, answer, why, rarity, flag, p_valid, dropped)"
+                " VALUES (?,?,?,?,?,?,?,?)",
                 (rid, cand["rank"], cand["answer"], cand.get("why", ""), cand.get("rarity"), cand.get("flag"),
-                 cand.get("p_valid"), dropped, cand.get("expected_pts")),
+                 cand.get("p_valid"), dropped),
             )
     for call in result.get("calls", []):
         c.execute(

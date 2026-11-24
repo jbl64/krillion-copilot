@@ -1,6 +1,5 @@
 """Thin LLM wrapper: JSON-mode calls, timing, and a fake mode for tests."""
 import json
-import math
 import os
 import re
 import time
@@ -36,50 +35,6 @@ def _fake_reply(node: str, user: str) -> dict:
             {"answer": "Example niche answer C", "why": "fake mode"},
         ]
     }
-
-
-class NoLogprobs(RuntimeError):
-    """The model/API reply carried no logprobs. Raised instead of guessing from free text."""
-
-
-CHOICES = "ABCD"
-
-
-def _fake_choice(user: str) -> dict:
-    return {"A": 0.8, "B": 0.15, "C": 0.04, "D": 0.01}
-
-
-def choice_probs(top_logprobs) -> dict:
-    """[(token, logprob), ...] -> {A..D: prob} normalized over the four letters (missing letters get 0)."""
-    raw = dict.fromkeys(CHOICES, 0.0)
-    for token, lp in top_logprobs:
-        t = token.strip().upper()
-        if t in raw:
-            raw[t] += math.exp(lp)
-    total = sum(raw.values())
-    if total <= 0:
-        raise NoLogprobs("none of A-D appeared in the top logprobs")
-    return {k: v / total for k, v in raw.items()}
-
-
-def call_choice(node: str, system: str, user: str) -> tuple[dict, dict]:
-    """One multiple-choice call (answer = a single letter A-D). Returns ({A..D: prob}, call_info), read from logprobs."""
-    t0 = time.perf_counter()
-    if FAKE:
-        probs, tokens = _fake_choice(user), 0
-    else:
-        resp = _get_client().chat.completions.create(
-            model=MODEL, temperature=0.0, max_tokens=1, logprobs=True, top_logprobs=5,
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-        )
-        lp = resp.choices[0].logprobs
-        if lp is None or not lp.content:
-            raise NoLogprobs(f"model {MODEL} returned no logprobs")
-        probs = choice_probs([(t.token, t.logprob) for t in lp.content[0].top_logprobs])
-        tokens = resp.usage.total_tokens if resp.usage else 0
-    info = {"node": node, "model": "fake" if FAKE else MODEL,
-            "latency_ms": int((time.perf_counter() - t0) * 1000), "tokens": tokens}
-    return probs, info
 
 
 def parse_json(text: str) -> dict:
