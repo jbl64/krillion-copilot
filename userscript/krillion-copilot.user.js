@@ -72,6 +72,7 @@
     const bits = [];
     if (c.value) bits.push(esc(c.value));
     if (c.p_valid != null && c.p_valid < 0.9) bits.push('~' + Math.round(c.p_valid * 100) + '% sure');
+    if (c.expected_pts != null) bits.push('~' + Math.round(c.expected_pts) + ' pts');
     if (c.flag === 'common') bits.push('common');
     return '<li style="margin-bottom:5px"><b style="font-size:15px">' + esc(c.answer) + '</b>' +
       (bits.length ? ' <span style="opacity:.6">· ' + bits.join(' · ') + '</span>' : '') +

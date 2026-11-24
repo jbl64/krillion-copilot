@@ -45,14 +45,15 @@ def test_validate_skips_llm_when_no_candidates():
 
 def test_suggest_returns_and_logs_dropped(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "t.db")
-    fake_validate(monkeypatch, {"results": [
-        {"i": 1, "p_valid": 0.9}, {"i": 2, "p_valid": 0.1}, {"i": 3, "p_valid": 0.8}]})
+    dist = {"Example niche answer A": {"A": 1.0}, "Example niche answer B": {"D": 1.0}, "Example niche answer C": {"B": 1.0}}
+    monkeypatch.setattr(llm, "_fake_choice", lambda user: dist[user.split("Candidate: ")[1]])
     data = client.post("/suggest", json={"prompt": "Name a thing", "mode": "test"}).json()
-    assert len(data["candidates"]) == 2 and len(data["dropped"]) == 1
-    assert data["candidates"][0]["p_valid"] == 0.9
-    rows = sqlite3.connect(tmp_path / "t.db").execute("SELECT answer, p_valid, dropped FROM candidates").fetchall()
+    assert [c["answer"][-1] for c in data["candidates"]] == ["A", "C"] and len(data["dropped"]) == 1
+    assert data["candidates"][0]["p_valid"] == 1.0 and data["candidates"][0]["expected_pts"] == 85.0
+    rows = sqlite3.connect(tmp_path / "t.db").execute("SELECT answer, p_valid, dropped, expected_pts FROM candidates").fetchall()
     assert sorted(r[2] for r in rows) == [0, 0, 1]
-    assert [r for r in rows if r[2] == 1][0][1] == 0.1
+    assert [r for r in rows if r[2] == 1][0][1] == 0.0
+    assert [r for r in rows if r[2] == 0 and r[1] == 0.7][0][3] == 0.7 * 60
 
 
 def test_unsure_answers_rank_after_confident_ones_but_common_answers_rank_last(monkeypatch):

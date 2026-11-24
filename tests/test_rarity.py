@@ -56,7 +56,7 @@ def test_suggest_with_real_values_logged(tmp_path, monkeypatch):
                         ["the", "Mausoleum at Halicarnassus", "sesquipedalian", "zzxqvbnm"]]}
         if node == "generate" else real(node, user)))
     data = client.post("/suggest", json={"prompt": "Name a wonder", "mode": "test"}).json()
-    assert {c["node"] for c in data["calls"]} == {"route", "generate", "validate"}
+    assert {c["node"] for c in data["calls"]} == {"route", "generate", "decide"}
     assert [c["answer"] for c in data["candidates"]] == [
         "Mausoleum at Halicarnassus", "sesquipedalian", "zzxqvbnm", "the"]
     rows = sqlite3.connect(tmp_path / "t.db").execute("SELECT answer, rarity, flag FROM candidates").fetchall()
