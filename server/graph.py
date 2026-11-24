@@ -212,7 +212,7 @@ def validate(state: State) -> State:
         # The letter rule is code's job (or unchecked); keep it out of the validator's prompt entirely.
         user = f"Judge whether each candidate is a real, recognized example of: {subject}\nCandidates:\n{listing}"
     else:
-        user = f"Prompt: {state['prompt']}\nCategory: {state['category']}\n"
+        user = f"Prompt: {state['prompt']}\n"  # no category label: the validator read "entity" as a condition (dropped all Minecraft items)
         if state.get("rule", {}).get("status") == "ok":
             user += "A code check already verified the letter/spelling rule for every candidate below.\n"
         elif state["category"] == "constraint":

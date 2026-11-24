@@ -1,0 +1,53 @@
+{
+  "note": "Hand-built validity probe. kind: real = confident real answer (control); plausible_fake = invented name that sounds real (could collide with something real by accident: review and delete any that do); nonsense_fake = invented word. Edit freely; each prompt needs >=3 real and >=3 fake.",
+  "prompts": [
+    {
+      "prompt": "Name a pasta dish",
+      "real": ["Pasta alla Norma", "Bucatini all'Amatriciana", "Spaghetti alle vongole", "Orecchiette con le cime di rapa"],
+      "plausible_fake": ["Rigatoni alla Pastorella Nera", "Linguine al Limone Fume Trapanese"],
+      "nonsense_fake": ["Brantelli", "Vorzetti"]
+    },
+    {
+      "prompt": "Name a news organization",
+      "real": ["Reuters", "Al Jazeera", "Le Monde", "Deutsche Welle"],
+      "plausible_fake": ["The Harrowgate Courier", "Meridian Bay Tribune"],
+      "nonsense_fake": ["Qorvex Press", "Zantl Dispatch"]
+    },
+    {
+      "prompt": "Name a music genre (listed as a genre on Spotify)",
+      "real": ["shoegaze", "vaporwave", "bossa nova", "drill"],
+      "plausible_fake": ["glitch polka", "velvet drill"],
+      "nonsense_fake": ["zorkwave", "plinthcore"]
+    },
+    {
+      "prompt": "Name an animal that stings",
+      "real": ["scorpion", "stingray", "bullet ant", "box jellyfish"],
+      "plausible_fake": ["velvet stingmoth", "silver-banded sting hare"],
+      "nonsense_fake": ["zorpion", "quillfly"]
+    },
+    {
+      "prompt": "Name a part of the human head",
+      "real": ["philtrum", "mastoid process", "glabella", "zygomatic arch"],
+      "plausible_fake": ["supranasal lunette", "occiput vellum"],
+      "nonsense_fake": ["brenzal gland", "quorid bone"]
+    },
+    {
+      "prompt": "Name a fast food chain that operates in more than one country",
+      "real": ["KFC", "Jollibee", "Tim Hortons", "Pret A Manger"],
+      "plausible_fake": ["Burger Hollow", "Pollo Verde Express"],
+      "nonsense_fake": ["Qwikzor", "Fryndle's"]
+    },
+    {
+      "prompt": "Name a country with the letter H in its name (ignore the word \"the\")",
+      "real": ["Honduras", "Haiti", "Hungary", "Ghana"],
+      "plausible_fake": ["Hallandor", "Hornavia"],
+      "nonsense_fake": ["Hzorbia", "Khemplar"]
+    },
+    {
+      "prompt": "Name a living bird bigger than a chicken",
+      "real": ["emu", "ostrich", "greater rhea", "mute swan"],
+      "plausible_fake": ["greater plume-necked rhea", "cassowary-crowned crane"],
+      "nonsense_fake": ["zorbil", "velkrane"]
+    }
+  ]
+}
