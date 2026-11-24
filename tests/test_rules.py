@@ -63,13 +63,12 @@ def test_suggest_constraint_end_to_end(tmp_path, monkeypatch):
         return real(node, user)
 
     monkeypatch.setattr(llm, "_fake_reply", fake)
-    _record_decide(monkeypatch, seen)
     data = client.post("/suggest", json={"prompt": "Name a country with Q or no E", "mode": "t"}).json()
     assert [c["answer"] for c in data["candidates"]] == ["Dominica", "Mozambique"]
     assert [c["answer"] for c in data["dropped"]] == ["Egypt"]
     assert data["rule"]["status"] == "ok"
-    assert "a country" in seen["decide"] and "Egypt" not in seen["decide"]
-    assert "Q or no E" not in seen["decide"]  # the letter rule never reaches the validator
+    assert "a country" in seen["validate"] and "Egypt" not in seen["validate"]
+    assert "Q or no E" not in seen["validate"]  # the letter rule never reaches the validator
     row = sqlite3.connect(tmp_path / "t.db").execute("SELECT rule FROM rounds").fetchone()
     assert '"status": "ok"' in row[0]
     rows = sqlite3.connect(tmp_path / "t.db").execute("SELECT answer, dropped FROM candidates").fetchall()
@@ -86,19 +85,8 @@ def test_failed_selftest_falls_back_to_validator(monkeypatch):
     assert len(data["candidates"]) == 3 and data["dropped"] == []
 
 
-def _record_decide(monkeypatch, seen):
-    real_choice = llm._fake_choice
-
-    def rec(user):
-        seen["decide"] = seen.get("decide", "") + user + "\n"
-        return real_choice(user)
-
-    monkeypatch.setattr(llm, "_fake_choice", rec)
-
-
 def _route_fake(monkeypatch, first_rule, repaired_rule, seen, subject=None):
     real = llm._fake_reply
-    _record_decide(monkeypatch, seen)
 
     def fake(node, user):
         if node == "route":
@@ -137,7 +125,7 @@ def test_failed_repair_keeps_original_status_and_validator_does_not_judge_letter
     data = client.post("/suggest", json={"prompt": "5 letter animal", "mode": "t"}).json()
     assert data["rule"]["status"] == "selftest_failed" and data["rule"]["repaired"] is True
     assert len(data["candidates"]) == 4 and data["dropped"] == []  # nothing dropped on letter claims
-    assert "5 letter animal" in seen["decide"]  # no subject returned -> full-prompt fallback
+    assert "could not be code-checked" in seen["validate"]  # no subject returned -> full-prompt fallback
 
 
 def test_validator_gets_subject_not_rule_even_when_rule_unchecked(monkeypatch):
@@ -147,7 +135,7 @@ def test_validator_gets_subject_not_rule_even_when_rule_unchecked(monkeypatch):
                 seen, subject="an animal")
     data = client.post("/suggest", json={"prompt": "animal with exactly 5 letters", "mode": "t"}).json()
     assert data["rule"]["status"] == "selftest_failed"
-    assert "an animal" in seen["decide"] and "5 letters" not in seen["decide"]
+    assert "an animal" in seen["validate"] and "5 letters" not in seen["validate"]
 
 
 def test_no_repair_call_when_rule_ok(monkeypatch):

@@ -295,13 +295,13 @@ def build_graph():
     g.add_node("generate", generate)
     g.add_node("rule_check", rule_check)
     g.add_node("rarity", rarity)
-    g.add_node("decide", decide)
+    g.add_node("validate", validate)  # `decide` (per-candidate logprob MCQ) is built and tested but not wired: it over-dropped
     g.add_edge(START, "route")
     g.add_edge("route", "generate")
     g.add_edge("generate", "rule_check")
     g.add_edge("rule_check", "rarity")
-    g.add_edge("rarity", "decide")
-    g.add_edge("decide", END)
+    g.add_edge("rarity", "validate")
+    g.add_edge("validate", END)
     return g.compile()
 
 
